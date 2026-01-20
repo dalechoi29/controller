@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Rotation Gizmo - Axis-Based Rotation Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #viewport-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #preview-viewport {
+            width: 100%;
+            height: 60vh;
+            position: relative;
+            background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a calc(100% - 4px), #555 calc(100% - 4px), #666 calc(100% - 2px), #444 100%);
+        }
+
+        #work-viewport {
+            width: 100%;
+            height: 40vh;
+            position: relative;
+            border-top: 1px solid #555;
+        }
+
+        /* Custom cursor for touch screen canvas */
+        #work-viewport canvas {
+            cursor: url('/pointer.png') 3 3, auto !important;
+        }
+
+        /* Force custom cursor on all interactive states */
+        #work-viewport canvas:hover,
+        #work-viewport canvas:active {
+            cursor: url('/pointer.png') 3 3, auto !important;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .viewport-label {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 350px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        #info h1 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            color: #4CAF50;
+        }
+
+        #info p {
+            margin: 5px 0;
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+
+        #info .status {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #info .phase {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        #info .controls {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 12px;
+            color: #aaa;
+        }
+
+        #info .controls-title {
+            color: #fff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        #reset-button {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 24px;
+            background: #2a2a2a;
+            color: #fff;
+            border: 2px solid #444;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            z-index: 100;
+        }
+
+        #reset-button:hover {
+            background: #3a3a3a;
+            border-color: #666;
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        #reset-button:active {
+            transform: translateX(-50%) translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Style Switcher Panel */
+        #style-switcher {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #444;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+
+        #style-switcher h3 {
+            color: #4CAF50;
+            font-size: 14px;
+            margin: 0 0 10px 0;
+            font-weight: bold;
+        }
+
+        .style-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .style-button {
+            padding: 8px 16px;
+            background: #2a2a2a;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: left;
+        }
+
+        .style-button:hover {
+            background: #3a3a3a;
+            border-color: #666;
+        }
+
+        .style-button.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+  <script type="module" crossorigin src="/assets/index-C97UfPc-.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/three-CMObsbRy.js">
+</head>
+<body>
+    <div id="viewport-container">
+        <div id="preview-viewport">
+            <div class="viewport-label">MAIN SCREEN</div>
+        </div>
+        <div id="work-viewport">
+            <div class="viewport-label">TOUCH SCREEN</div>
+        </div>
+    </div>
+
+    <div id="info">
+        <h1>🎯 Touch Screen 3D Control</h1>
+        <p>MPR & 3D Interaction</p>
+        
+        <div class="status">
+            <p>✓ Top: Main screen (clean view)</p>
+            <p>✓ Bottom: Touch screen (controls)</p>
+            <p>✓ Real-time sync</p>
+        </div>
+
+        <div class="controls">
+            <div class="controls-title">Try it:</div>
+            <p>• Left-click: Rotate the camera</p>
+            <p>• Click axis line: Rotate baseline as axis</p>
+            <p>• Click axis label: Select MPR Plane</p>
+        </div>
+    </div>
+
+    <button id="reset-button">Reset</button>
+
+    <!-- Style Switcher Panel -->
+    <div id="style-switcher">
+        <h3>Gizmo Style</h3>
+        <div class="style-buttons">
+            <button class="style-button active" data-style="circular">Circular</button>
+            <button class="style-button" data-style="linear">Linear</button>
+        </div>
+    </div>
+
+</body>
+</html>
+
