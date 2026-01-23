@@ -1644,6 +1644,7 @@ class RotationGizmoApp {
 
   /**
    * Make info panels draggable while preserving their default CSS position
+   * Supports both mouse and touch events for mobile compatibility
    */
   makeDraggable(element) {
     const header = element.querySelector('.info-header');
@@ -1663,21 +1664,36 @@ class RotationGizmoApp {
 
     header.style.cursor = 'move';
     header.style.userSelect = 'none';
+    header.style.touchAction = 'none'; // Prevent default touch behaviors
     
     // Initialize with no transform (keeps CSS default position)
     element.style.transform = 'translate(0px, 0px)';
     
+    // Get client coordinates from mouse or touch event
+    const getClientCoords = (e) => {
+      if (e.type.startsWith('touch')) {
+        const touch = e.touches[0] || e.changedTouches[0];
+        return { clientX: touch.clientX, clientY: touch.clientY };
+      }
+      return { clientX: e.clientX, clientY: e.clientY };
+    };
+    
     const dragStart = (e) => {
-      // Only drag if clicking on the header (not the chevron area)
+      // Only drag if clicking/touching on the header (not the chevron area)
       if (e.target.classList.contains('chevron')) {
         return;
       }
       
-      initialX = e.clientX - xOffset;
-      initialY = e.clientY - yOffset;
+      const coords = getClientCoords(e);
+      initialX = coords.clientX - xOffset;
+      initialY = coords.clientY - yOffset;
 
       if (e.target === header || e.target.tagName === 'H1' || header.contains(e.target)) {
         isDragging = true;
+        // Prevent text selection on touch devices
+        if (e.type.startsWith('touch')) {
+          e.preventDefault();
+        }
       }
     };
 
@@ -1685,8 +1701,9 @@ class RotationGizmoApp {
       if (isDragging) {
         e.preventDefault();
         
-        currentX = e.clientX - initialX;
-        currentY = e.clientY - initialY;
+        const coords = getClientCoords(e);
+        currentX = coords.clientX - initialX;
+        currentY = coords.clientY - initialY;
 
         xOffset = currentX;
         yOffset = currentY;
@@ -1701,11 +1718,18 @@ class RotationGizmoApp {
       isDragging = false;
     };
     
+    // Mouse events
     header.addEventListener('mousedown', dragStart);
     document.addEventListener('mousemove', drag);
     document.addEventListener('mouseup', dragEnd);
     
-    console.log(`✓ Panel draggable at default position: ${element.id}`);
+    // Touch events for mobile
+    header.addEventListener('touchstart', dragStart, { passive: false });
+    document.addEventListener('touchmove', drag, { passive: false });
+    document.addEventListener('touchend', dragEnd);
+    document.addEventListener('touchcancel', dragEnd);
+    
+    console.log(`✓ Panel draggable (mouse & touch) at default position: ${element.id}`);
   }
 
   /**
