@@ -6,10 +6,11 @@ import { rayPlaneIntersection, signedAngle, quaternionFromAxisAngle, createRotat
  * Handles raycasting, axis picking, and user input events
  */
 export class InputHandler {
-  constructor(camera, domElement, gizmo) {
+  constructor(camera, domElement, gizmo, app = null) {
     this.camera = camera;
     this.domElement = domElement;
     this.gizmo = gizmo;
+    this.app = app; // Reference to main app for slice control
 
     // Raycasting setup
     this.raycaster = new THREE.Raycaster();
@@ -104,8 +105,8 @@ export class InputHandler {
     // Get all gizmo meshes for picking
     const pickingMeshes = this.gizmo.getPickingMeshes();
 
-    // Perform raycast
-    const intersects = this.raycaster.intersectObjects(pickingMeshes, false);
+    // Perform raycast (recursive=true to check children of Groups like square frames)
+    const intersects = this.raycaster.intersectObjects(pickingMeshes, true);
 
     // Debug: Log raycast attempts
     if (this.debugMode && intersects.length > 0) {
@@ -114,13 +115,21 @@ export class InputHandler {
 
     if (intersects.length > 0) {
       const intersection = intersects[0];
-      const userData = intersection.object.userData;
+      let userData = intersection.object.userData;
+      
+      // If the hit object doesn't have userData, check parent (for groups/children)
+      let checkObject = intersection.object;
+      while ((!userData.type || !userData.axis) && checkObject.parent) {
+        checkObject = checkObject.parent;
+        userData = checkObject.userData;
+        if (userData.axis) break;
+      }
 
       // Handle both axis rings and labels
       if (userData.type === 'gizmo-axis' || userData.type === 'gizmo-label') {
         const isLabel = userData.type === 'gizmo-label';
         if (this.debugMode) {
-          const type = isLabel ? 'label' : 'ring';
+          const type = isLabel ? 'label' : 'axis';
           console.log(`✅ Hit ${userData.axis.toUpperCase()}-axis ${type} at distance ${intersection.distance.toFixed(2)}`);
         }
         return {
@@ -144,7 +153,44 @@ export class InputHandler {
     // Update mouse position
     this.updateMousePosition(event);
 
-    if (this.isDragging) {
+    // Handle Y-axis dual interaction (detect drag direction on first move)
+    if (this.yAxisDragMode !== undefined) {
+      if (this.yAxisDragMode === null) {
+        // Determine drag direction based on initial movement
+        const deltaX = Math.abs(event.clientX - this.sliceDragStartX);
+        const deltaY = Math.abs(event.clientY - this.sliceDragStartY);
+        
+        if (deltaX > 5 || deltaY > 5) {  // Threshold to detect direction
+          if (deltaY > deltaX) {
+            // More vertical movement - slice control
+            this.yAxisDragMode = 'slice';
+            this.isControllingSlice = true;
+            this.isDragging = false;
+            this.domElement.style.cursor = "url('/pointer.png') 3 3, ns-resize";
+            console.log(`🎯 Y-axis: Vertical drag detected - slice control`);
+          } else {
+            // More horizontal movement - rotation
+            this.yAxisDragMode = 'rotate';
+            this.isDragging = true;
+            this.isControllingSlice = false;
+            this.gizmo.isRotating = true;
+            this.domElement.style.cursor = "url('/pointer.png') 3 3, ew-resize";
+            this.setupRotation({ axis: 'y', axisVector: new THREE.Vector3(0, 1, 0) });
+            console.log(`🎯 Y-axis: Horizontal drag detected - rotation`);
+          }
+        }
+      }
+      
+      // Execute the determined action
+      if (this.yAxisDragMode === 'slice') {
+        this.updateSlicePosition(event);
+      } else if (this.yAxisDragMode === 'rotate') {
+        this.updateRotation(event);
+      }
+    } else if (this.isControllingSlice) {
+      // Legacy slice control (for Y-axis label)
+      this.updateSlicePosition(event);
+    } else if (this.isDragging) {
       // Perform rotation during drag
       this.updateRotation();
     } else if (!this.isCameraRotating) {
@@ -201,37 +247,80 @@ export class InputHandler {
       this.selectedAxis = hit.axis;
       
       if (hit.isLabel) {
-        // LABEL CLICKED: Allow camera rotation (don't block OrbitControls)
-        // This behaves like clicking empty space for drag
-        this.isCameraRotating = true;
-        this.isDragging = false;
-        
-        console.log(`🏷️ Label ${hit.axis.toUpperCase()} clicked - camera rotation enabled`);
-        
-      } else {
-        // RING CLICKED: Setup axis rotation (block OrbitControls)
-        event.stopPropagation();
-        event.preventDefault();
-        
-        this.isDragging = true;
-        this.isCameraRotating = false;
-        
-        // Update gizmo visual state
-        this.gizmo.setActiveAxis(hit.axis);
-        this.gizmo.isRotating = true;
-        
-        // Change cursor
-        this.domElement.style.cursor = "url('/pointer.png') 3 3, auto";
-        
-        // Disable orbit controls
-        if (this.onGizmoInteractionStart) {
-          this.onGizmoInteractionStart();
+        // LABEL CLICKED: Check if it's Y-axis for slice control
+        if (hit.axis === 'y' && this.app) {
+          // Y-AXIS LABEL: Start slice control mode
+          event.stopPropagation();
+          event.preventDefault();
+          
+          this.isControllingSlice = true;
+          this.isDragging = false;
+          this.isCameraRotating = false;
+          this.sliceDragStartY = event.clientY;
+          this.sliceStartPosition = this.app.transverseYPosition || 0;
+          
+          this.domElement.style.cursor = "url('/pointer.png') 3 3, ns-resize";
+          
+          console.log(`🏷️ Y-axis label clicked - transverse slice control enabled`);
+          
+        } else {
+          // OTHER LABELS: Allow camera rotation (don't block OrbitControls)
+          this.isCameraRotating = true;
+          this.isDragging = false;
+          
+          console.log(`🏷️ Label ${hit.axis.toUpperCase()} clicked - camera rotation enabled`);
         }
         
-        console.log(`🎯 Ring ${hit.axis.toUpperCase()} grabbed - axis rotation enabled`);
-        
-        // Phase 4: Store initial rotation state
-        this.setupRotation(hit);
+      } else {
+        // RING/AXIS CLICKED: Check if it's Y-axis for dual interaction
+        if (hit.axis === 'y' && this.app) {
+          // Y-AXIS: Support both slice control (vertical) and rotation (horizontal)
+          event.stopPropagation();
+          event.preventDefault();
+          
+          // Store initial mouse position to detect drag direction
+          this.yAxisDragMode = null; // Will be set to 'slice' or 'rotate' on first move
+          this.sliceDragStartY = event.clientY;
+          this.sliceDragStartX = event.clientX;
+          this.sliceStartPosition = this.app.transverseYPosition || 0;
+          
+          // Update gizmo visual state for Y-axis
+          this.gizmo.setActiveAxis(hit.axis);
+          
+          this.domElement.style.cursor = "url('/pointer.png') 3 3, move";
+          
+          // Disable orbit controls
+          if (this.onGizmoInteractionStart) {
+            this.onGizmoInteractionStart();
+          }
+          
+          console.log(`🎯 Y-axis grabbed - waiting for drag direction`);
+          
+        } else {
+          // OTHER AXES (X, Z): Setup axis rotation (block OrbitControls)
+          event.stopPropagation();
+          event.preventDefault();
+          
+          this.isDragging = true;
+          this.isCameraRotating = false;
+          
+          // Update gizmo visual state
+          this.gizmo.setActiveAxis(hit.axis);
+          this.gizmo.isRotating = true;
+          
+          // Change cursor
+          this.domElement.style.cursor = "url('/pointer.png') 3 3, auto";
+          
+          // Disable orbit controls
+          if (this.onGizmoInteractionStart) {
+            this.onGizmoInteractionStart();
+          }
+          
+          console.log(`🎯 Ring ${hit.axis.toUpperCase()} grabbed - axis rotation enabled`);
+          
+          // Phase 4: Store initial rotation state
+          this.setupRotation(hit);
+        }
       }
     } else {
       // Clicking on empty space - camera rotation will start
@@ -253,8 +342,43 @@ export class InputHandler {
     const timeDiff = mouseUpTime - this.mouseDownTime;
     const mouseDist = this.mouse.distanceTo(this.mouseDownPosition);
     
-    // If quick click with minimal movement on a LABEL, snap to axis view
-    if (timeDiff < 250 && mouseDist < 0.05 && this.selectedAxis && this.hitType === 'label') {
+    // Handle Y-axis dual interaction end
+    if (this.yAxisDragMode !== undefined) {
+      this.yAxisDragMode = undefined;
+      this.isControllingSlice = false;
+      this.isDragging = false;
+      this.domElement.style.cursor = "url('/pointer.png') 3 3, auto";
+      
+      // Clear active axis visual state
+      this.gizmo.clearActiveAxis();
+      this.gizmo.isRotating = false;
+      
+      // Re-enable orbit controls
+      if (this.onGizmoInteractionEnd) {
+        this.onGizmoInteractionEnd();
+      }
+      
+      console.log(`✅ Y-axis interaction ended`);
+    }
+    
+    // Handle slice control end (legacy for Y-axis label)
+    if (this.isControllingSlice) {
+      this.isControllingSlice = false;
+      this.domElement.style.cursor = "url('/pointer.png') 3 3, auto";
+      
+      // Clear active axis visual state
+      this.gizmo.clearActiveAxis();
+      
+      // Re-enable orbit controls
+      if (this.onGizmoInteractionEnd) {
+        this.onGizmoInteractionEnd();
+      }
+      
+      console.log(`✅ Transverse slice control ended at Y = ${this.app.transverseYPosition.toFixed(2)}`);
+    }
+    
+    // If quick click with minimal movement on a LABEL (not Y-axis), snap to axis view
+    if (timeDiff < 250 && mouseDist < 0.05 && this.selectedAxis && this.hitType === 'label' && this.selectedAxis !== 'y') {
       console.log(`🎯 Quick label click - snapping to ${this.selectedAxis.toUpperCase()}-axis view`);
       this.snapToAxisView(this.selectedAxis);
     }
@@ -348,6 +472,24 @@ export class InputHandler {
     
     console.log('🔄 Using fallback rotation plane');
     return fallbackAxis;
+  }
+
+  /**
+   * Update transverse slice position during Y-axis drag
+   */
+  updateSlicePosition(event) {
+    if (!this.app) return;
+    
+    const deltaY = event.clientY - this.sliceDragStartY;
+    const sensitivity = 0.02; // Adjust sensitivity
+    const newY = this.sliceStartPosition - deltaY * sensitivity; // Invert for intuitive control
+    
+    // Clamp to gizmo bounds (don't go beyond Y-axis label button)
+    // Gizmo is at Y=1.0, radius is 3.5, so label is at ~Y=4.0 in world space
+    // Model space: clamp to ±3.0 (safe range within gizmo)
+    const clampedY = Math.max(-3.0, Math.min(3.0, newY));
+    
+    this.app.updateTransverseClipping(clampedY);
   }
 
   /**

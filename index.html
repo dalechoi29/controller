@@ -15,7 +15,7 @@
             margin: 0;
             overflow: hidden;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: #1a1a1a;
+            background: #0a0a0a;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -26,25 +26,53 @@
             flex-direction: column;
             width: 100%;
             height: 100vh;
+            gap: 20px;
+            padding: 10px 0;
+            box-sizing: border-box;
         }
 
         #preview-viewport {
             width: 100%;
-            height: 60vh;
+            flex: 7;
             position: relative;
-            background: linear-gradient(to bottom, #1a1a1a 0%, #1a1a1a calc(100% - 4px), #555 calc(100% - 4px), #666 calc(100% - 2px), #444 100%);
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #preview-viewport canvas {
+            width: calc((100vh - 40px) * 0.7 * 1.6);
+            height: calc((100vh - 40px) * 0.7);
+            max-width: 100%;
+            max-height: 100%;
+            background: linear-gradient(to bottom, #050505 0%, #050505 calc(100% - 4px), #555 calc(100% - 4px), #666 calc(100% - 2px), #444 100%);
+            border: 12px solid #4a4a4a;
+            box-sizing: border-box;
         }
 
         #work-viewport {
             width: 100%;
-            height: 40vh;
+            flex: 3;
             position: relative;
-            border-top: 1px solid #555;
+            background: #0a0a0a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
         /* Custom cursor for touch screen canvas */
         #work-viewport canvas {
             cursor: url('/pointer.png') 3 3, auto !important;
+            width: calc((100vh - 40px) * 0.3 * 1.6);
+            height: calc((100vh - 40px) * 0.3);
+            max-width: 100%;
+            max-height: 100%;
+            background: #050505;
+            border-radius: 35px 35px 0 0;
+            border: 12px solid #4a4a4a;
+            border-bottom: none;
+            box-sizing: border-box;
         }
 
         /* Force custom cursor on all interactive states */
@@ -53,7 +81,7 @@
             cursor: url('/pointer.png') 3 3, auto !important;
         }
 
-        canvas {
+        #preview-viewport canvas {
             display: block;
             width: 100%;
             height: 100%;
@@ -73,14 +101,121 @@
             z-index: 10;
         }
 
-        #info {
+        /* Split view labels */
+        .split-label {
             position: absolute;
-            top: 20px;
-            left: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .split-label.left {
+            top: 25px;
+            left: 25%;
+            transform: translateX(-50%);
+        }
+
+        /* MPR plane labels (right side - stacked, right-aligned within canvas) */
+        .split-label.transverse {
+            top: 25px;
+            left: 75%;
+            transform: translateX(-50%);
+            text-align: center;
+            max-width: calc(((100vh - 40px) * 0.7 * 1.6) / 2 - 50px);
+        }
+
+        .split-label.coronal {
+            top: calc(33.33% + 25px);
+            left: 75%;
+            transform: translateX(-50%);
+            text-align: center;
+            max-width: calc(((100vh - 40px) * 0.7 * 1.6) / 2 - 50px);
+        }
+
+        .split-label.sagittal {
+            top: calc(66.66% + 25px);
+            left: 75%;
+            transform: translateX(-50%);
+            text-align: center;
+            max-width: calc(((100vh - 40px) * 0.7 * 1.6) / 2 - 50px);
+        }
+
+        /* Vertical divider for split view - positioned on canvas */
+        #preview-viewport canvas::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, transparent, #555 10%, #666 50%, #555 90%, transparent);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Divider container for canvas-relative positioning */
+        .canvas-dividers {
+            position: absolute;
+            width: calc(70vh * 1.6);
+            height: 70vh;
+            max-width: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .canvas-dividers .vertical-divider {
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(to bottom, transparent, #555 10%, #666 50%, #555 90%, transparent);
+        }
+
+        .canvas-dividers .horizontal-divider-1 {
+            position: absolute;
+            left: 50%;
+            right: 0;
+            top: 33.33%;
+            height: 2px;
+            background: linear-gradient(to right, #555, #666 50%, #555);
+        }
+
+        .canvas-dividers .horizontal-divider-2 {
+            position: absolute;
+            left: 50%;
+            right: 0;
+            top: 66.66%;
+            height: 2px;
+            background: linear-gradient(to right, #555, #666 50%, #555);
+        }
+        
+        /* Summary gizmo overlay borders */
+        #summary-gizmo-border,
+        #coronal-summary-gizmo-border,
+        #sagittal-summary-gizmo-border {
+            position: absolute;
+            pointer-events: none;
+            z-index: 15;
+            border: 2px solid rgba(120, 120, 120, 0.7);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+        }
+
+        /* Info panels for Main Screen and Touch Screen */
+        .info-panel {
+            position: absolute;
             color: white;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(60, 60, 60, 0.95);
             padding: 15px 20px;
             border-radius: 8px;
+            border: 1px solid rgba(100, 100, 100, 0.4);
             font-size: 14px;
             line-height: 1.6;
             max-width: 350px;
@@ -88,31 +223,87 @@
             backdrop-filter: blur(10px);
             z-index: 100;
         }
+        
+        #main-screen-info {
+            top: 20px;
+            left: 20px;
+        }
+        
+        #touch-screen-info {
+            bottom: 20px;
+            left: 20px;
+            max-width: 380px;
+        }
 
-        #info h1 {
-            font-size: 18px;
-            margin-bottom: 10px;
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .info-header:hover .chevron {
             color: #4CAF50;
         }
 
-        #info p {
+        .info-panel h1 {
+            font-size: 26px;
+            margin-bottom: 0;
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .chevron {
+            font-size: 16px;
+            color: #aaa;
+            transition: transform 0.3s ease, color 0.2s ease;
+            margin-left: 10px;
+            cursor: pointer;
+        }
+
+        .chevron.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .info-content {
+            max-height: 500px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            opacity: 1;
+        }
+
+        .info-content.collapsed {
+            max-height: 0;
+            opacity: 0;
+            margin-top: 0;
+        }
+
+        .info-content > p:first-child {
+            margin-top: 10px;
+        }
+
+        .info-panel p {
             margin: 5px 0;
             font-size: 13px;
             color: #e0e0e0;
         }
 
-        #info .status {
+        .info-panel .status {
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
 
-        #info .phase {
+        .info-panel .phase {
             color: #4CAF50;
             font-weight: bold;
         }
 
-        #info .controls {
+        .info-panel .controls {
             margin-top: 10px;
             padding-top: 10px;
             border-top: 1px solid rgba(255, 255, 255, 0.2);
@@ -120,17 +311,30 @@
             color: #aaa;
         }
 
-        #info .controls-title {
+        .info-panel .controls-title {
             color: #fff;
             font-weight: bold;
             margin-bottom: 5px;
         }
 
-        #reset-button {
+
+        /* Style Switcher Panel - Hidden */
+        #style-switcher {
+            display: none;
+        }
+
+        /* Button group container */
+        #button-group {
             position: absolute;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .control-button {
             padding: 12px 24px;
             background: #2a2a2a;
             color: #fff;
@@ -142,108 +346,92 @@
             transition: all 0.2s ease;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            z-index: 100;
         }
 
-        #reset-button:hover {
+        .control-button:hover {
             background: #3a3a3a;
             border-color: #666;
-            transform: translateX(-50%) translateY(-2px);
+            transform: translateY(-2px);
             box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
         }
 
-        #reset-button:active {
-            transform: translateX(-50%) translateY(0);
+        .control-button:active {
+            transform: translateY(0);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        /* Style Switcher Panel */
-        #style-switcher {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            border-radius: 8px;
-            border: 2px solid #444;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            z-index: 100;
-            backdrop-filter: blur(10px);
-        }
-
-        #style-switcher h3 {
-            color: #4CAF50;
-            font-size: 14px;
-            margin: 0 0 10px 0;
-            font-weight: bold;
-        }
-
-        .style-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .style-button {
-            padding: 8px 16px;
-            background: #2a2a2a;
-            color: #fff;
-            border: 1px solid #555;
-            border-radius: 6px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: left;
-        }
-
-        .style-button:hover {
-            background: #3a3a3a;
-            border-color: #666;
-        }
-
-        .style-button.active {
-            background: #4CAF50;
-            border-color: #4CAF50;
-            font-weight: bold;
+        .control-button.active {
+            background: #ff6600;
+            border-color: #ff6600;
         }
     </style>
 </head>
 <body>
     <div id="viewport-container">
         <div id="preview-viewport">
-            <div class="viewport-label">MAIN SCREEN</div>
+            <div class="split-label left">3D VIEW</div>
+            <div class="split-label transverse">TRANSVERSE</div>
+            <div class="split-label coronal">CORONAL</div>
+            <div class="split-label sagittal">SAGITTAL</div>
+            <div class="canvas-dividers">
+                <div class="vertical-divider"></div>
+                <div class="horizontal-divider-1"></div>
+                <div class="horizontal-divider-2"></div>
+            </div>
+            <div id="summary-gizmo-border"></div>
+            <div id="coronal-summary-gizmo-border"></div>
+            <div id="sagittal-summary-gizmo-border"></div>
         </div>
         <div id="work-viewport">
-            <div class="viewport-label">TOUCH SCREEN</div>
         </div>
     </div>
 
-    <div id="info">
-        <h1>🎯 Touch Screen 3D Control</h1>
-        <p>MPR & 3D Interaction</p>
-        
-        <div class="status">
-            <p>✓ Top: Main screen (clean view)</p>
-            <p>✓ Bottom: Touch screen (controls)</p>
-            <p>✓ Real-time sync</p>
+    <!-- Main Screen Info Panel -->
+    <div id="main-screen-info" class="info-panel">
+        <div class="info-header">
+            <h1>Main Screen</h1>
+            <span class="chevron">▲</span>
         </div>
-
-        <div class="controls">
-            <div class="controls-title">Try it:</div>
-            <p>• Left-click: Rotate the camera</p>
-            <p>• Click axis line: Rotate baseline as axis</p>
-            <p>• Click axis label: Select MPR Plane</p>
+        <div class="info-content">
+            <p>View controlled via Touch Screen</p>
+            
+            <div class="status">
+                <p>✓ Left: 3D perspective view</p>
+                <p>✓ Right: MPR slice planes</p>
+                <p>✓ Real-time sync</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Touch Screen Info Panel -->
+    <div id="touch-screen-info" class="info-panel">
+        <div class="info-header">
+            <h1>Touch Screen 3D Control</h1>
+            <span class="chevron">▲</span>
+        </div>
+        <div class="info-content">
+            <div class="controls">
+                <div class="controls-title">Try it:</div>
+                <p>• Left-click: Rotate the camera</p>
+                <p>• Click axis line: Rotate baseline as axis</p>
+                <p>• Drag transverse plane: Choose cross-section</p>
+            </div>
         </div>
     </div>
 
-    <button id="reset-button">Reset</button>
+    <!-- Button Group -->
+    <div id="button-group">
+        <button class="control-button style-button active" data-style="cube">Cube</button>
+        <button class="control-button style-button" data-style="circular">Circular</button>
+        <button class="control-button" id="reset-button">Reset</button>
+    </div>
 
-    <!-- Style Switcher Panel -->
+    <!-- Style Switcher Panel - Hidden -->
     <div id="style-switcher">
-        <h3>Gizmo Style</h3>
+        <h3>Style</h3>
         <div class="style-buttons">
-            <button class="style-button active" data-style="circular">Circular</button>
-            <button class="style-button" data-style="linear">Linear</button>
+            <button class="style-button active" data-style="cube">Cube</button>
+            <button class="style-button" data-style="circular">Circular</button>
         </div>
     </div>
 

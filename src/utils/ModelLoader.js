@@ -12,11 +12,16 @@ export class ModelLoader {
   /**
    * Load a GLTF/GLB model from a file path
    * @param {string} path - Path to the model file (relative to public folder)
+   * @param {Object} options - Loading options
+   * @param {boolean} options.decolorize - Apply white/gray material for touch screen
    * @returns {Promise<THREE.Object3D>} - The loaded model
    */
-  async loadModel(path) {
+  async loadModel(path, options = {}) {
     return new Promise((resolve, reject) => {
       console.log(`📦 Loading model from: ${path}`);
+      if (options.decolorize) {
+        console.log('   → Will apply decolorized materials (white/gray)');
+      }
       
       this.loader.load(
         path,
@@ -35,11 +40,26 @@ export class ModelLoader {
           const scale = targetSize / maxDim;
           model.scale.setScalar(scale);
           
-          // Enable shadows on all meshes
+          // Enable shadows and apply materials
           model.traverse((child) => {
             if (child.isMesh) {
               child.castShadow = true;
               child.receiveShadow = true;
+              
+              // Apply decolorized material if requested
+              if (options.decolorize && child.material) {
+                const material = child.material.clone();
+                
+                // Convert to white/gray tones
+                if (material.color) {
+                  const gray = material.color.r * 0.299 + material.color.g * 0.587 + material.color.b * 0.114;
+                  // Make it lighter (more white) for touch screen
+                  const lightGray = Math.min(gray + 0.3, 1.0);
+                  material.color.setRGB(lightGray, lightGray, lightGray);
+                }
+                
+                child.material = material;
+              }
               
               // Ensure materials are visible
               if (child.material) {
@@ -52,6 +72,9 @@ export class ModelLoader {
           console.log(`   - Original size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
           console.log(`   - Scale factor: ${scale.toFixed(2)}`);
           console.log(`   - Meshes: ${this.countMeshes(model)}`);
+          if (options.decolorize) {
+            console.log('   - Materials: Decolorized (white/gray)');
+          }
           
           resolve(model);
         },
@@ -113,4 +136,6 @@ export class ModelLoader {
     return clone;
   }
 }
+
+
 

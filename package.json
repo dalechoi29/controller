@@ -8,11 +8,17 @@
     "build": "vite build",
     "preview": "vite preview"
   },
-  "keywords": ["three.js", "3d", "rotation", "gizmo"],
+  "keywords": [
+    "three.js",
+    "3d",
+    "rotation",
+    "gizmo"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "three": "^0.182.0"
+    "three": "^0.182.0",
+    "three-bvh-csg": "^0.0.17"
   },
   "devDependencies": {
     "vite": "^7.3.1"
