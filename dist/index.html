@@ -423,69 +423,21 @@
                 height: calc(95vw / 1.6) !important;
             }
 
-            /* Split labels - adjust positioning for mobile */
-            .split-label {
-                font-size: 9px;
-                letter-spacing: 0.5px;
-            }
-
+            /* Hide MPR plane labels on mobile */
             .split-label.transverse,
             .split-label.coronal,
             .split-label.sagittal {
-                max-width: calc(45vw - 30px);
-                right: 10px;
-                left: auto;
-                transform: none;
+                display: none !important;
             }
 
-            .split-label.transverse {
-                top: 15px;
-            }
-
-            .split-label.coronal {
-                top: calc(33.33% + 15px);
-            }
-
-            .split-label.sagittal {
-                top: calc(66.66% + 15px);
-            }
-
-            /* Info panels - mobile friendly */
+            /* Hide info panels on mobile for cleaner interface */
             .info-panel {
-                position: fixed !important;
-                width: 90vw !important;
-                max-width: 350px;
-                font-size: 13px;
-                padding: 12px;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+                display: none !important;
             }
 
-            #main-screen-info {
-                top: 10px !important;
-            }
-
+            #main-screen-info,
             #touch-screen-info {
-                bottom: auto !important;
-                top: auto !important;
-                position: fixed !important;
-                bottom: 70px !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-            }
-
-            .info-panel h1 {
-                font-size: 16px;
-            }
-
-            .info-panel p {
-                font-size: 12px;
-            }
-
-            .info-content {
-                max-height: 200px;
-                overflow-y: auto;
+                display: none !important;
             }
 
             /* Button group - mobile positioning */
@@ -514,26 +466,15 @@
                 display: none !important;
             }
 
-            /* Summary gizmo borders - adjust for mobile */
+            /* Hide summary gizmo borders on mobile for cleaner interface */
             .summary-gizmo-border {
-                width: 80px !important;
-                height: 80px !important;
-                border-width: 2px !important;
+                display: none !important;
             }
 
-            .summary-gizmo-border.transverse {
-                top: 10px !important;
-                left: 10px !important;
-            }
-
-            .summary-gizmo-border.coronal {
-                top: calc(33.33% + 5px) !important;
-                left: 10px !important;
-            }
-
+            .summary-gizmo-border.transverse,
+            .summary-gizmo-border.coronal,
             .summary-gizmo-border.sagittal {
-                top: calc(66.66% + 5px) !important;
-                left: 10px !important;
+                display: none !important;
             }
         }
 
@@ -548,33 +489,10 @@
                 padding-bottom: 90px;
             }
 
-            .info-panel {
-                width: 95vw !important;
-                font-size: 12px;
-                padding: 10px;
-            }
-
-            .info-panel h1 {
-                font-size: 14px;
-            }
-
-            .info-panel p {
-                font-size: 11px;
-            }
-
             .control-button {
                 padding: 8px 14px;
                 font-size: 12px;
                 min-width: 70px;
-            }
-
-            .summary-gizmo-border {
-                width: 70px !important;
-                height: 70px !important;
-            }
-
-            .split-label {
-                font-size: 8px;
             }
         }
 
@@ -613,10 +531,6 @@
             #button-group {
                 bottom: 5px;
             }
-
-            .info-panel {
-                max-width: 280px;
-            }
         }
 
         /* Touch device optimizations */
@@ -625,19 +539,6 @@
                 padding: 14px 22px;
                 font-size: 15px;
                 min-height: 44px; /* iOS touch target size */
-            }
-
-            .info-header {
-                padding: 12px;
-                min-height: 44px;
-            }
-
-            .chevron {
-                min-width: 44px;
-                min-height: 44px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
             }
         }
     </style>
