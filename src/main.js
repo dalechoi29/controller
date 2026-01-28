@@ -53,9 +53,13 @@ class RotationGizmoApp {
     this.createSliceIndicators();
 
     // Create camera for WORK viewport (orthographic for isometric view, no distortion)
+    // Use responsive frustum size - smaller on mobile for better fit
+    const isMobile = window.innerWidth <= 768;
+    const frustumSize = isMobile ? 8 : 12; // Smaller on mobile to fit better
+    
     this.workCameraManager = new CameraManager(this.renderer.workRenderer, {
       type: 'orthographic',
-      frustumSize: 12,  // Larger viewing area to see full gizmo
+      frustumSize: frustumSize,  // Responsive: 8 on mobile, 12 on desktop
       aspect: 1.6       // 1.6:1 aspect ratio for touch screen
     });
     this.initialCameraPosition = this.workCameraManager.getCamera().position.clone();
@@ -190,6 +194,20 @@ class RotationGizmoApp {
    */
   setupResizeHandler() {
     const handleResize = () => {
+      // Adjust work camera frustum size for mobile
+      const isMobile = window.innerWidth <= 768;
+      const newFrustumSize = isMobile ? 8 : 12;
+      const camera = this.workCameraManager.getCamera();
+      
+      if (camera.isOrthographicCamera) {
+        const aspect = camera.right / camera.top; // Get current aspect
+        camera.left = newFrustumSize * aspect / -2;
+        camera.right = newFrustumSize * aspect / 2;
+        camera.top = newFrustumSize / 2;
+        camera.bottom = newFrustumSize / -2;
+        camera.updateProjectionMatrix();
+      }
+      
       // Update work camera aspect ratio
       this.workCameraManager.handleResize();
       
@@ -209,7 +227,7 @@ class RotationGizmoApp {
         this.sagittalCameraManager.handleResize();
       }
       
-      console.log('✓ Cameras resized');
+      console.log('✓ Cameras resized (mobile frustum: ' + newFrustumSize + ')');
     };
     
     // Note: RendererManager already handles renderer resize
